@@ -49,11 +49,15 @@ _preqs_var=$(_$(mname)_preqs_var)
 # utility internal functions
 #####################################################################################################
 
+# working in docker we stop using the hostname
+_binary_suffix=general
+# _binary_suffix=$(shell hostname)
+
 define bin_rule
 $(_md)/bin/%: $(_md)/cpp/%.cpp
 	mkdir -p $$(@D)
 	g++ $$^ -O2 -o $$@ -Wall -Wno-write-strings -std=c++0x
-$(_md)/bin.$(shell hostname)/%: $(_md)/cpp/%.cpp
+$(_md)/bin.$(_binary_suffix)/%: $(_md)/cpp/%.cpp
 	mkdir -p $$(@D)
 	g++ $$^ -O2 -o $$@ -Wall -Wno-write-strings -std=c++0x
 endef
@@ -62,7 +66,7 @@ define bin_rule2
 $(_md)/bin/$1: $(_md)/cpp/$(addsuffix .cpp,$1) $2
 	mkdir -p $$(@D)
 	g++ $$^ -O2 -o $$@ -Wall -Wno-write-strings -std=c++0x $3
-$(_md)/bin.$(shell hostname)/$1: $(_md)/cpp/$(addsuffix .cpp,$1) $2
+$(_md)/bin.$(_binary_suffix)/$1: $(_md)/cpp/$(addsuffix .cpp,$1) $2
 	mkdir -p $$(@D)
 	g++ $$^ -O2 -o $$@ -Wall -Wno-write-strings -std=c++0x $3
 endef
