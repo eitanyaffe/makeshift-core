@@ -371,7 +371,7 @@ _module_local=$(call __module,md/$1/$1_int.mk)
 
 # add module under MAKESHIFT_ROOT
 # 1: module name
-_module_root=$(call __module,$(MAKESHIFT_ROOT)/md/$1/$1_int.mk)
+_module_root=$(call __module,$(MAKESHIFT_ROOT)/makeshift-modules/$1/$1_int.mk)
 
 # mark active module
 _active_module=$(call __active_module,$1)
