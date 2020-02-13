@@ -71,6 +71,24 @@ $(_md)/bin.$(_binary_suffix)/$1: $(_md)/cpp/$(addsuffix .cpp,$1) $2
 	g++ $$^ -O2 -o $$@ -Wall -Wno-write-strings -std=c++0x $3
 endef
 
+define bin_rule_boost
+$(_md)/bin/$1: $(_md)/cpp/$(addsuffix .cpp,$1) $2
+	mkdir -p $$(@D)
+	g++ $$^ -I $(BOOST_DIR) -O2 -o $$@ -Wall -Wno-write-strings -std=c++0x $3
+$(_md)/bin.$(_binary_suffix)/$1: $(_md)/cpp/$(addsuffix .cpp,$1) $2
+	mkdir -p $$(@D)
+	g++ $$^ -I $(BOOST_DIR) -O2 -o $$@ -Wall -Wno-write-strings -std=c++0x $3
+endef
+
+define bin_rule_debug
+$(_md)/bin/$1: $(_md)/cpp/$(addsuffix .cpp,$1) $2
+	mkdir -p $$(@D)
+	g++ $$^ -g -O0 -o $$@ -Wall -Wno-write-strings -std=c++0x $3
+$(_md)/bin.$(_binary_suffix)/$1: $(_md)/cpp/$(addsuffix .cpp,$1) $2
+	mkdir -p $$(@D)
+	g++ $$^ -g -O0 -o $$@ -Wall -Wno-write-strings -std=c++0x $3
+endef
+
 # verify variable defined
 __check_defined=\
 $(if $(value $1),,$(error Undefined parameter $1$(if $(value 2), ($(strip $2)))))
@@ -154,7 +172,6 @@ endif
 .SILENT .PHONY: do info skip clean redo modules help
 
 .DELETE_ON_ERROR:
-.DEFAULT_GOAL:=anchor_loop
 
 #####################################################################################################
 # general functions
@@ -371,7 +388,7 @@ _module_local=$(call __module,md/$1/$1_int.mk)
 
 # add module under MAKESHIFT_ROOT
 # 1: module name
-_module_root=$(call __module,$(MAKESHIFT_ROOT)/makeshift-modules/$1/$1_int.mk)
+_module_root=$(call __module,$(MAKESHIFT_ROOT)/makeshift-modules/$1/$(notdir $1)_int.mk)
 
 # mark active module
 _active_module=$(call __active_module,$1)

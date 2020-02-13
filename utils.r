@@ -1,5 +1,4 @@
 options(stringsAsFactors=F)
-library(gplots)
 
 save.lines=function(odir, ofn, lines)
 {
