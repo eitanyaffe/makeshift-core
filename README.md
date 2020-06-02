@@ -17,7 +17,7 @@ export MAKESHIFT_ROOT=/path/to/parent_dir/of/makeshift-core
 Usage example
 -------------
 
-To test the example go into the example/basic directory and run:
+To run on a template example cd into the example/basic directory and run:
 ```
 %> make p_module1
 ```
