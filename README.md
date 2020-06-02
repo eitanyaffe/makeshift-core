@@ -3,6 +3,24 @@ Makeshift is a workflow infrastructure based on gnu-make, developed by Eitan Yaf
 
 To use makeshift clone this repository, set the MAKESHIFT_ROOT environment variable to point to the parent of the makeshift-core directory, and follow the example below for basic features.
 
+Installation
+------------
+
+Get the repository from github:
+```
+%> git clone https://github.com/eitanyaffe/makeshift-core
+```
+
+Set the MAKESHIFT_ROOT environment variable to the parent of the makeshift-core directory. Can be done in the .bashrc file:
+```
+export MAKESHIFT_ROOT=/path/to/parent_dir/of/makeshift-core
+```
+
+To test the example go into the example/basic directory and run:
+```
+%> make p_module1
+```
+
 Usage example
 -------------
 
