@@ -1,5 +1,5 @@
-# Makeshift: a workflow/pipeline infrastructure based on gnu-make
-Makeshift is a workflow infrastructure based on gnu-make, developed by Eitan Yaffe (eitan.yaffe@gmail.com).
+# Makeshift: a gnu-make workflow extension 
+Makeshift is a workflow infrastructure based on gnu-make, developed by Eitan Yaffe (eitan.yaffe@gmail.com). It defines makefile functions that allow to define steps (bash calls) that are orgazined within makeshift modules. A key feature of makeshift is the ability to rapidly customize any call parameter.
 
 Installation
 ------------
