@@ -1,7 +1,7 @@
-# makeshift-core
-Makeshift is a workflow infrastructure based on gnu-make, developed by Eitan Yaffe (Stanford).
+# Makeshift: a workflow/pipeline infrastructure based on gnu-make
+Makeshift is a workflow infrastructure based on gnu-make, developed by Eitan Yaffe (eitan.yaffe@gmail.com).
 
-To use makeshift clone this repository, set the MAKESHIFT_ROOT environment variable to point to the parent of the makeshift-core directory, and follow the example below.
+To use makeshift clone this repository, set the MAKESHIFT_ROOT environment variable to point to the parent of the makeshift-core directory, and follow the example below for basic features.
 
 ```
 include $(MAKESHIFT_ROOT)/makeshift-core/makeshift.mk
