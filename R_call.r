@@ -19,6 +19,9 @@ source.fn = args[3]
 func = args[4]
 params = args[5:length(args)]
 
+if (Sys.getenv("MAKESHIFT_ROOT") == "")
+    Sys.setenv(MAKESHIFT_ROOT=dirname(mk.dir))
+
 source(paste(mk.dir, "/utils.r", sep=""))
 source(paste(mk.dir, "/ptree.r", sep=""))
 

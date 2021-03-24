@@ -107,6 +107,8 @@ _assert_module_not_exists=$(if $(findstring $1,$(__modules)),$(error module $1 a
 _module_pr=$(if $(findstring $1,$(__modules)),,$(error pre-requisite module $1 of module $(mname) not defined))
 _var_pr=$(if $($1),,$(error pre-requisite variable $(value 1) of module $(mname) not defined))
 
+_get_module_dir=$(_$(1)_path)
+
 _assert_class_exists=$(if $(findstring $1,$(__classes)),,$(error class $1 not defined))
 _assert_class_not_exists=$(if $(findstring $1,$(__classes)),$(error class $1 already defined))
 _assert_instance_exists=$(if $(findstring $2,$(__class_$1)),,$(error class instance $2 not defined in class $2))
