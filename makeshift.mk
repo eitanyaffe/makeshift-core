@@ -7,7 +7,7 @@
 # allow to force root makefile
 MMAKE:=$(MAKE) -f $(MROOT)
 
-_version:=1.0
+_version:=1.01
 
 _info_active=$(if $(findstring $(mname),$1), (active))
 _info_file=$(_$1_file)
@@ -292,6 +292,12 @@ _class_instance_variable_name=$(addprefix __class_$1_$2_,$3)
 _class_instance_variable_value=\
 $(if $($($(call _class_instance_variable_name,$1,$2,$3))),$($($(call _class_instance_variable_name,$1,$2,$3))),$($(call _class_instance_variable_name,$1,$2,$3)))
 
+# 1: class
+# 2: instance
+# 3: variable
+# Same as _class_instance_variable_value, yet without expanding variables
+_class_instance_variable_value_ne=\
+$($(call _class_instance_variable_name,$1,$2,$3))
 
 # 1: class
 # 2: instance
@@ -327,6 +333,16 @@ $(call _assert_instance_not_exists,$1,$2)\
 $(eval __class_$1+=$2)\
 $(foreach X,$(join $(addsuffix =,$(call _class_instance_variable_names,$1,$2)),$3),$(eval $X))
 
+# define instance within class
+# 1: class
+# 2: instance
+# 3: variable values. Values never expanded
+_class_instance_ne=\
+$(call _assert_class_exists,$1)\
+$(call _assert_instance_not_exists,$1,$2)\
+$(eval __class_$1+=$2)\
+$(foreach X,$(join $(addsuffix =,$(call _class_instance_variable_names,$1,$2)),$3),$(info $X))
+
 # get all instances of class
 # 1: class
 _class_get_instances=$(and $(call _assert_class_exists,$1),__class_$1)
@@ -342,6 +358,16 @@ $(info \# Set active instance: $1.$2)\
 $(foreach X,$($(call _class_variable,$1)),$(eval export $X:=$(call _class_instance_variable_value,$1,$2,$X)))\
 $(foreach X,$($(call _class_variable,$1)),$(info $X=$(call _class_instance_variable_value,$1,$2,$X)))\
 $(info \#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#)
+
+# set current active instance of class, without expanding variables and quitely
+# 1: class
+# 2: instance
+_class_activate_quiet_ne=$(foreach X,$($(call _class_variable,$1)),$(eval export $X:=$(call _class_instance_variable_value_ne,$1,$2,$X)))
+
+# get variable value across all instances
+# 1: class
+# 2: variable
+_class_variable_list=$(strip $(foreach instance,$(__class_$1),$(call _class_activate_quiet_ne,$1,$(instance))$($2)))
 
 # old:
 # $(foreach X,$(join $(addsuffix :=,$($(call _class_variable,$1))),$(call _class_instance_variables,$1,$2)),$(eval export $X))
@@ -526,9 +552,12 @@ reval=$(shell $(MAKE) --no-print-directory print2 v=$1 $2)
 
 # variable helper functions
 print: ; @echo v=$($(v))
+p: ; @echo v=$($(v))
 print2: ; @echo $($(v))
 ls: ; ls -lart $($(v))
 head: ;	head $($(v))
+tail: ;	tail $($(v))
+cat: ;	cat $($(v))
 
 # print all modules
 define module_rule
@@ -548,3 +577,18 @@ help:
 	@echo "  skip: skip step by touching result"
 	@echo "Example:"
 	@echo "%> make m=module1 s=step1 step"
+
+#####################################################################################################
+# environment variables
+#####################################################################################################
+
+# _makeflags=$(shell echo $(MAKEFLAGS) | sed -n -e 's/^.*-- //p')
+
+# # baseline makeshift variables after last module is registered
+# _track_vars_start=$(eval __mk_vars_base:=$(.VARIABLES))
+
+# # capture variables, last line in pipeline makefile
+# _track_vars_stop=\
+# $(eval _mk_vars_final:=\
+# $(filter-out _%,$(filter-out __mk_vars_base,$(filter-out $(__mk_vars_base),$(.VARIABLES))))) \
+# $(eval _mk_vars_str:=$(foreach v,$(_mk_vars_final),$v=$($v)))
