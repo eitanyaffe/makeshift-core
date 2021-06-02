@@ -28,6 +28,15 @@ echo "required modules: $(if $(_$1_preqs),$(call _info_preqs,$1),NA)"
 echo "required variables: $(if $(_$1_preqs_var),$(call _info_preqs_var,$1),NA)"
 endef
 
+
+#####################################################################################################
+# helper defs
+#####################################################################################################
+
+__space :=
+__space +=
+__comma := ,
+
 #####################################################################################################
 # gloabl makeshift variables
 #####################################################################################################
@@ -67,6 +76,12 @@ $(_md)/bin/$1: $(_md)/cpp/$(addsuffix .cpp,$1) $2
 	mkdir -p $$(@D)
 	g++ $$^ -O2 -o $$@ -Wall -Wno-write-strings -std=c++0x $3
 $(_md)/bin.$(_binary_suffix)/$1: $(_md)/cpp/$(addsuffix .cpp,$1) $2
+	mkdir -p $$(@D)
+	g++ $$^ -O2 -o $$@ -Wall -Wno-write-strings -std=c++0x $3
+endef
+
+define bin_rule3
+$(BIN_DIR)/$m/$1: $(_md)/cpp/$(addsuffix .cpp,$1) $2
 	mkdir -p $$(@D)
 	g++ $$^ -O2 -o $$@ -Wall -Wno-write-strings -std=c++0x $3
 endef
@@ -139,18 +154,32 @@ _dry=$(findstring n,$(filter-out --%,$(MAKEFLAGS)))
 ifeq ($(_dry),)
 
 # real
+
+# rsync is done in two steps, to avoid uploading .done files before the directory content
+ifdef GCP_RSYNC_SRC_VAR
+define __rsync
+@echo Delocalizing $(GCP_RSYNC_SRC_VAR) && \
+gsutil -mq rsync -r -x ".*\.done.*|.*\.dsub.*" $($(GCP_RSYNC_SRC_VAR)) $(GCP_RSYNC_TARGET_BUCKET) && \
+sleep 10s && \
+gsutil -mq rsync -r -x ".*\.dsub.*" $($(GCP_RSYNC_SRC_VAR)) $(GCP_RSYNC_TARGET_BUCKET)
+endef
+else
+endif
+
 define __start
 @echo "START: $@"
 $(if $1,mkdir -p $1)
 endef
 
 define __end
+$(__rsync)
 @echo "END: $@"
 @echo $(_step_sep)
 endef
 
 define __end_touch
 @touch $@
+$(__rsync)
 @echo "END: $@"
 @echo $(_step_sep)
 endef
@@ -202,6 +231,19 @@ CONTAINER_FLAG=/.dockerenv
 _set_config_dir=\
 $(eval PROJECT_ID=$(shell cat $1/project_id)) \
 $(foreach V,$(shell cat $1/path_vars | perl $(_dir)/parse_paths.pl $(CONTAINER_FLAG)),$(eval $V))
+
+# 1: var name
+# 2: table name
+# 3: field
+# _get_field=$(eval $(info hello) $1=$(shell perl $(_dir)/get_field.pl $2 $3))
+
+define _get_field
+`perl $(_dir)/get_field.pl $1 $2`
+endef
+
+define _get_params
+`perl $(_dir)/table2params.pl $1 $2`
+endef
 
 #####################################################################################################
 # module functions
@@ -359,6 +401,12 @@ $(foreach X,$($(call _class_variable,$1)),$(eval export $X:=$(call _class_instan
 $(foreach X,$($(call _class_variable,$1)),$(info $X=$(call _class_instance_variable_value,$1,$2,$X)))\
 $(info \#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#)
 
+# retrieve string of activation
+_class_activate_str=\
+$(call _assert_class_exists,$1)\
+$(call _assert_instance_exists,$1,$2)\
+$(foreach X,$($(call _class_variable,$1)),$X=$(call _class_instance_variable_value,$1,$2,$X))
+
 # set current active instance of class, without expanding variables and quitely
 # 1: class
 # 2: instance
@@ -380,8 +428,7 @@ $(call _assert_class_exists,$1)\
 $(__class_$1)
 
 class_step:
-	$(call _class_activate,$(class),$(instance))
-	$(MAKE) $t
+	$(MAKE) $t $(call _class_activate_str,$(class),$(instance))
 
 # make target t over all instances of class
 class_loop:
@@ -390,6 +437,17 @@ class_loop:
 	$(call _assert_class_exists,$(class))
 	$(foreach instance,$(__class_$(class)),\
 	$(MAKE) class_step class=$(class) instance=$(instance); $(ASSERT);)
+
+# alternative form sets the variables instead of passing them in the command line
+class_step_alt:
+	$(call _class_activate,$(class),$(instance))
+	$(MAKE) $t
+class_loop_alt:
+	$(call _assert,t)
+	@echo going over all instances of $(class): $(call _class_get_instances,$(class))
+	$(call _assert_class_exists,$(class))
+	$(foreach instance,$(__class_$(class)),\
+	$(MAKE) class_step_alt class=$(class) instance=$(instance); $(ASSERT);)
 
 # Example:
 # $(call _class,point,X Y)             -> define class
@@ -470,7 +528,7 @@ _end_touch=$(__end_touch)
 _md=$(_module_dir)
 
 # wrapper script for easy access of R functions
-_Rcall=$(_dir)/R_call.r $(_dir)
+_Rcall=Rscript $(_dir)/R_call.r $(_dir)
 _R=$(_Rcall) $(_md)
 
 # macro which saves stats into file
@@ -559,6 +617,13 @@ head: ;	head $($(v))
 tail: ;	tail $($(v))
 cat: ;	cat $($(v))
 
+# print work plan
+plan:
+	$(MAKE) $t -n PAR_TYPE=local
+# clean plan, from scratch 
+splan:
+	@$(MAKE) $t -n PAR_TYPE=local | grep START
+
 # print all modules
 define module_rule
 	echo "modules: $(__modules)"
@@ -579,16 +644,23 @@ help:
 	@echo "%> make m=module1 s=step1 step"
 
 #####################################################################################################
+# cloud related utils
+#####################################################################################################
+
+# try to copy twice, useful for gcsfuse bug
+cp2=cp $1 $2; if [ $$? -ne 0 ]; then cp $1 $2; fi
+
+#####################################################################################################
 # environment variables
 #####################################################################################################
 
 # _makeflags=$(shell echo $(MAKEFLAGS) | sed -n -e 's/^.*-- //p')
 
 # # baseline makeshift variables after last module is registered
-# _track_vars_start=$(eval __mk_vars_base:=$(.VARIABLES))
+_track_vars_start=$(eval __mk_vars_base:=$(.VARIABLES))
 
 # # capture variables, last line in pipeline makefile
-# _track_vars_stop=\
-# $(eval _mk_vars_final:=\
-# $(filter-out _%,$(filter-out __mk_vars_base,$(filter-out $(__mk_vars_base),$(.VARIABLES))))) \
-# $(eval _mk_vars_str:=$(foreach v,$(_mk_vars_final),$v=$($v)))
+#_track_vars_stop=\
+#$(eval _mk_vars_final:=\
+#$(filter-out _%,$(filter-out __mk_vars_base,$(filter-out $(__mk_vars_base),$(.VARIABLES))))) \
+#$(eval _mk_vars_str:=$(foreach v,$(_mk_vars_final),$v=$($v)))

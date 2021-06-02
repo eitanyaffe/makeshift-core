@@ -1,5 +1,27 @@
 options(stringsAsFactors=F)
 
+exec=function(command, verbose=T, ignore.error=F)
+{
+    if (verbose)
+        cat(sprintf("running command: %s\n", command))
+    rc = system(command)
+    if (!ignore.error && rc != 0)
+        stop(sprintf("error in command: %s", command))
+    rc
+}
+
+send.email=function(sendgrid.key, from.email, to.email, subject, message, attachments=NULL)
+{
+    if (from.email == "none" || to.email == "none")
+        return (NULL)
+    script = paste0(Sys.getenv("MAKESHIFT_ROOT"), "/makeshift-core/send_email.py")
+    command = sprintf("python3 %s -k %s -f %s -t %s -s '%s' -m '%s'", script, sendgrid.key, from.email, to.email, subject, message)
+    if (!is.null(attachments))
+        command = paste(command, paste("-a", attachments, collapse=" "))
+    cat(sprintf("sending email update to %s\n", to.email))
+    exec(command, verbose=F, ignore.error=T)
+}    
+
 save.lines=function(odir, ofn, lines)
 {
     system(paste("mkdir -p", odir))
