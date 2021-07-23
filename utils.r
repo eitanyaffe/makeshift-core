@@ -421,7 +421,7 @@ wlegend2=function(fdir, panel, breaks, title="general", size=1, height, width, m
 
 save.table=function(x, ofn, verbose=T)
 {
-    if (verbose) cat(sprintf("saving result table: %s\n", ofn))
+    if (verbose) cat(sprintf("saving table: %s\n", ofn))
     write.table(x, ofn, quote=F, row.names=F, sep="\t")
 }
 

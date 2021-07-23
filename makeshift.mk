@@ -86,6 +86,11 @@ $(BIN_DIR)/$m/$1: $(_md)/cpp/$(addsuffix .cpp,$1) $2
 	g++ $$^ -O2 -o $$@ -Wall -Wno-write-strings -std=c++0x $3
 endef
 
+define bin_rule4
+/tmp/$1: $(_md)/cpp/$(addsuffix .cpp,$1) $2
+	g++ $$^ -O2 -o $$@ -Wall -Wno-write-strings -std=c++0x $3
+endef
+
 define bin_rule_boost
 $(_md)/bin/$1: $(_md)/cpp/$(addsuffix .cpp,$1) $2
 	mkdir -p $$(@D)
@@ -222,7 +227,6 @@ _loop_make=$(foreach I,$2,\
 _loop_set=$(foreach V,$(addprefix $2_,$1),$(call $(call _assert,$(V))))\
 	  $(foreach V,$1,$(eval export $(V)=$($2_$(V))))
 
-
 _export_variable=$(foreach v,$1,$v=$($v))
 
 CONTAINER_FLAG=/.dockerenv
@@ -244,6 +248,16 @@ endef
 define _get_params
 `perl $(_dir)/table2params.pl $1 $2`
 endef
+
+#####################################################################################################
+# config functions
+#####################################################################################################
+
+__config=\
+$(call _file_exists,$1)\
+$(eval include $1) \
+$(eval _cd:=$(dir $(abspath $(lastword $(MAKEFILE_LIST))))) \
+$(call _set_user_title,configuration dir: $(_cd))
 
 #####################################################################################################
 # module functions
@@ -491,6 +505,18 @@ _register_module=$(call __register_module,$1,$2,$3,$4)
 _step=$(call __step,$1)
 
 #####################################################################################################
+# config functions
+#####################################################################################################
+
+# set config file
+# 1: config filename
+_config=$(call __config,$1)
+
+# set config file under MAKESHIFT_ROOT
+# 1: relative config filename
+_config_root=$(call __config,$(MAKESHIFT_ROOT)/$1/$(notdir $1)_cfg.mk)
+
+#####################################################################################################
 # module target
 #####################################################################################################
 
@@ -606,7 +632,7 @@ ms_package:
 
 # re-evaluate variable $1 given other variables defined in $2
 # example: $(call reval,SOME_DATASET_DIR,DATASET=$(DATASET1))
-reval=$(shell $(MAKE) --no-print-directory print2 v=$1 $2)
+reval=$(shell $(MAKE) --no-print-directory print2 v=$1 $2 $(PAR_MAKEOVERRIDES))
 
 # variable helper functions
 print: ; @echo v=$($(v))
