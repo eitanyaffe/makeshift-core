@@ -289,7 +289,7 @@ wheat=function(sm, field.x=1, field.y=2, field.value=3, main="", mai=c(1, 1, 0, 
 plot.empty=function(title, cex=1)
 {
     plot.new()
-    plot.window(0:1, 0:1)
+    plot.window(xlim=0:1, ylim=0:1)
     text(0.5, 0.5, title, cex=cex)
 }
 

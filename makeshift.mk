@@ -514,7 +514,7 @@ _config=$(call __config,$1)
 
 # set config file under MAKESHIFT_ROOT
 # 1: relative config filename
-_config_root=$(call __config,$(MAKESHIFT_ROOT)/$1/$(notdir $1)_cfg.mk)
+_config_root=$(call __config,$(MAKESHIFT_CONFIG)/$1/$(notdir $1)_cfg.mk)
 
 #####################################################################################################
 # module target
@@ -570,6 +570,9 @@ cdir=$(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 # set title
 _set_user_title=$(eval _user_title:=$1)
+
+# run a binary executable from the tmp dir
+run_local=cp $1 /tmp/$(notdir $1) && chmod +x /tmp/$(notdir $1) && /tmp/$(notdir $1)
 
 #####################################################################################################
 # makeshift actions
@@ -633,6 +636,7 @@ ms_package:
 # re-evaluate variable $1 given other variables defined in $2
 # example: $(call reval,SOME_DATASET_DIR,DATASET=$(DATASET1))
 reval=$(shell $(MAKE) --no-print-directory print2 v=$1 $2 $(PAR_MAKEOVERRIDES))
+reval2=$(shell $(MAKE) --no-print-directory print2 v=$1 $2)
 
 # variable helper functions
 print: ; @echo v=$($(v))
