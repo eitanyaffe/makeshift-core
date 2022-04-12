@@ -21,6 +21,10 @@ my $hline = <IN>;
 chomp($hline);
 my @h = split("\t", $hline);
 my $first = 1;
+
+my $max = 100;
+my $count = 0;
+
 while (my $line = <IN>) {
     if ($first) {
 	$first = 0;
@@ -36,5 +40,6 @@ while (my $line = <IN>) {
 	$item_field_found = $item_field_found | $h[$i] eq $field;
     }
     $item_field_found or die "item field $field not found";
+   #last if ($count++ == $max);
 }
 close(IN);
