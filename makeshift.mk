@@ -236,15 +236,16 @@ _set_config_dir=\
 $(eval PROJECT_ID=$(shell cat $1/project_id)) \
 $(foreach V,$(shell cat $1/path_vars | perl $(_dir)/parse_paths.pl $(CONTAINER_FLAG)),$(eval $V))
 
-# 1: var name
-# 2: table name
-# 3: field
-# _get_field=$(eval $(info hello) $1=$(shell perl $(_dir)/get_field.pl $2 $3))
-
+# get specific column from table
+# 1: table name
+# 2: field
 define _get_field
 `perl $(_dir)/get_field.pl $1 $2`
 endef
 
+# get all columns from table, returns field1=X field2=Y ...
+# 1: table name
+# 2: field
 define _get_params
 `perl $(_dir)/table2params.pl $1 $2`
 endef
