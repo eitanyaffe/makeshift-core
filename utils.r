@@ -321,7 +321,7 @@ fig.dir=function(dir, verbose=T)
 fig.start=function(ofn, type="png", fdir=NA, verbose=T, width=400, height=400, ...)
 {
     if (!is.na(fdir))
-        fig.dir(fdir)
+        fig.dir(fdir, verbose=verbose)
 
     if (verbose) cat(sprintf("creating figure: %s\n", ofn))
     switch(type,
@@ -358,10 +358,10 @@ wbarplot=function(m, main, fdir, ofn, beside, normalize.columns=F, cols, names, 
 }
 
 # discrete
-wlegend=function(fdir, names, cols, title="general", ofn.prefix=title, width=6, make.file=T, border=NA)
+wlegend=function(fdir, names, cols, title="general", ofn.prefix=title, width=6, make.file=T, border=NA, verbose=T)
 {
     N = length(names)
-    if (make.file) fig.start(fdir=fdir, width=width, height=2 + N*0.4, ofn=paste(fdir, "/", ofn.prefix, "_legend.pdf", sep=""), type="pdf")
+    if (make.file) fig.start(fdir=fdir, width=width, height=2 + N*0.4, ofn=paste(fdir, "/", ofn.prefix, "_legend.pdf", sep=""), type="pdf", verbose=verbose)
     par(mai=c(0,0,1,0))
     plot.new()
     title(main=title)

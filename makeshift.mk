@@ -19,6 +19,11 @@ _info_sep=----------------------------------------------------------------------
 _step_sep=*-------*-------*-------*-------*-------*-------*-------*-------*-------*------*
 _all_sep =-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
+#_step_str=---\/------\/------\/------\/------\/------\/------\/------\/------\/------\/---
+#_step_end=---/\------/\------/\------/\------/\------/\------/\------/\------/\------/\---
+_step_str=--->>------>>------>>------>>------>>------>>------>>------>>------>>------>>---
+_step_end=---<<------<<------<<------<<------<<------<<------<<------<<------<<------<<---
+
 define _info_module
 echo $(_info_sep)
 echo "module: $1$(call _info_active,$1)"
@@ -172,6 +177,7 @@ else
 endif
 
 define __start
+@echo "$(_step_str)"
 @echo "START: $@"
 $(if $1,mkdir -p $1)
 endef
@@ -179,14 +185,14 @@ endef
 define __end
 $(__rsync)
 @echo "END: $@"
-@echo $(_step_sep)
+@echo "$(_step_end)"
 endef
 
 define __end_touch
 @touch $@
 $(__rsync)
 @echo "END: $@"
-@echo $(_step_sep)
+@echo "$(_step_end)"
 endef
 
 else
@@ -194,13 +200,23 @@ else
 # dry
 
 define __start
-$(_step_sep)
+$(_step_str)
 START: $@
 $(if $1,mkdir -p $1)
 endef
 
-__end=END: $@
-__end_touch=END touch: $@
+define __end
+END: $@
+$(_step_end)
+endef
+
+define __end_touch
+END touch: $@
+$(_step_end)
+endef
+
+#__end=END: $@
+#__end_touch=END touch: $@
 
 endif
 
@@ -633,6 +649,21 @@ ms_package:
 #####################################################################################################
 # utility functions
 #####################################################################################################
+
+# create new variable by replacing text in filename
+# 1: source variable
+# 2: target variable
+# 3: source string with path
+# 4: target string with path
+_sub_variable=$(eval $2:=$(subst $3,$4,$($1)))
+
+# create new variables by replacing text in filename
+# new variable names set using suffix 
+# 1: source variables
+# 2: target suffix
+# 3: source string with path
+# 4: target string with path
+_sub_variables=$(foreach x,$1,$(call _sub_variable,$x,$(addsuffix $2,$x),$3,$4))
 
 # re-evaluate variable $1 given other variables defined in $2
 # example: $(call reval,SOME_DATASET_DIR,DATASET=$(DATASET1))
