@@ -432,3 +432,5 @@ load.table=function(ifn, assert.exists=T, verbose=T, ...)
         return (NULL)
     read.delim(ifn, ...)
 }
+
+source(paste0(Sys.getenv("MAKESHIFT_ROOT"), "/makeshift-core/combo_matrix.r"))
