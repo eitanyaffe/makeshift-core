@@ -60,8 +60,13 @@ combo.matrix.plot.color.legend=function(ll, title, fdir)
 make.panel=function(df, fields, colors, round.d=1, add.text=F,
                     min.value=NA, max.value=NA)
 {
+    if (any(!is.element(fields, names(df))))
+        stop(sprintf("missing some fields: %s", paste(fields, collapse=",")))
     values = df[,fields]
     N = length(colors)
+    
+    if (!all(is.numeric(values)))
+        stop(sprintf("some values not numeric: %s", paste(fields, collapse=",")))
     if(is.na(min.value)) min.value = min(values)
     if(is.na(max.value)) max.value = max(values)
     breaks = seq(min.value, max.value, length.out=N)
@@ -72,12 +77,16 @@ make.panel=function(df, fields, colors, round.d=1, add.text=F,
 # user-defined colors/values
 make.discrete.panel=function(df, fields, breaks, colors, round.d=0, add.text=F)
 {
+    if (any(!is.element(fields, names(df))))
+        stop(sprintf("missing some fields: %s", paste(fields, collapse=",")))
     list(fields=fields, type="discrete", colors=colors, breaks=breaks,
          round.d=round.d, add.text=add.text)
 }
 
 make.discrete.panel.auto=function(df, field, round.d=0, add.text=F)
 {
+    if (any(!is.element(field, names(df))))
+        stop(sprintf("missing field: %s", field))
     tt = sort(table(df[,field]), decreasing=T)
     breaks = names(tt)
     colors = rainbow(length(tt))
