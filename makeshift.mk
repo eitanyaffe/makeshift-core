@@ -7,6 +7,9 @@
 # allow to force root makefile
 MMAKE:=$(MAKE) -f $(MROOT)
 
+# disable directory messages
+MAKEFLAGS += --no-print-directory
+
 _version:=1.01
 
 _info_active=$(if $(findstring $(mname),$1), (active))
