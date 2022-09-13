@@ -15,8 +15,7 @@ _version:=1.01
 _info_active=$(if $(findstring $(mname),$1), (active))
 _info_file=$(_$1_file)
 _info_units=$(_$1_units)
-_info_preqs=$(_$1_preqs)
-_info_preqs_var=$(_$1_preqs_var)
+_info_version=$($(_$1_version))
 
 _info_sep=--------------------------------------------------------------------------------
 _step_sep=*-------*-------*-------*-------*-------*-------*-------*-------*-------*------*
@@ -31,11 +30,13 @@ define _info_module
 echo $(_info_sep)
 echo "module: $1$(call _info_active,$1)"
 echo "source file: $(call _info_file,$1)"
+echo "version: $(call _info_version,$1)"
 echo "units: $(if $(_$1_units),$(call _info_units,$1),NA)"
-echo "required modules: $(if $(_$1_preqs),$(call _info_preqs,$1),NA)"
-echo "required variables: $(if $(_$1_preqs_var),$(call _info_preqs_var,$1),NA)"
 endef
 
+define _print_module_version
+$(info $(_$1_version)=$($(_$1_version)))
+endef
 
 #####################################################################################################
 # helper defs
@@ -55,12 +56,11 @@ _dir:=$(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 # module path
 _module_dir=$(_$(mname)_path)
 
+# module version
+_module_version=$($(_$(mname)_version))
+
 # units
 _units=$(_$(mname)_units)
-
-# module pre-requisites
-_preqs=$(_$(mname)_preqs)
-_preqs_var=$(_$(mname)_preqs_var)
 
 #####################################################################################################
 # utility internal functions
@@ -148,8 +148,7 @@ _assert_target_not_exists=$(if $(findstring $2,$(call _get_targets,$1)),$(error 
 _set_units=$(eval _$1_units:=$2)
 _set_path=$(eval _$1_path:=$2)
 _set_file=$(eval _$1_file:=$2)
-_set_preqs=$(eval _$1_preqs:=$2)
-_set_preqs_var=$(eval _$1_preqs_var:=$2)
+_set_version=$(eval _$1_version:=$2)
 
 # 1: module, 2: target, 3: desc
 _set_target=$(eval _$1_targets+=$2) $(eval _$1_target_$2:=$3)
@@ -273,10 +272,15 @@ endef
 # config functions
 #####################################################################################################
 
+# set variable to not load version file, used to check if configuration versions are updated
+__load_version_file?=T
+
 __config=\
 $(call _file_exists,$1)\
 $(eval include $1) \
 $(eval _cd:=$(dir $(abspath $(lastword $(MAKEFILE_LIST))))) \
+$(if $(and $(findstring T,$(__load_version_file)),\
+$(wildcard $(_cd)/.versions)),$(eval include $(_cd)/.versions),) \
 $(call _set_user_title,configuration dir: $(_cd))
 
 #####################################################################################################
@@ -292,27 +296,23 @@ $(if $1,\
 $(if $(findstring $1,$(__modules)),,$(error module $1 not defined))\
 $(call _assert_module_exists,$1)\
 $(eval mname=$1)\
-$(foreach preq,$(_preqs),$(call _module_pr,$(preq),$(mname)))\
-$(foreach preq,$(_preqs_var),$(call _var_pr,$(preq),$(mname)))\
 $(foreach unit,$(_units),$(call load_unit,$(_module_dir)/$(unit))))\
 $(eval $(bin_rule))
 
 # each module registers itself using this function
 #  1: module name
-#  2: unit makefiles
-#  3: required modules
-#  4: required variables
+#  2: module version
+#  3: unit makefiles
 __register_module=\
 $(call _assert_module_not_exists,$1)\
 $(eval __modules+=$1)\
 $(eval _mname:=$1)\
 $(eval _$1_targets:=)\
-$(call _set_units,$1,$2)\
-$(call _set_preqs,$1,$3)\
-$(call _set_preqs_var,$1,$4)\
+$(call _set_version,$1,$2)\
+$(call _set_units,$1,$3)\
 $(call _set_path,$1,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))\
 $(call _set_file,$1,$(lastword $(MAKEFILE_LIST)))\
-$(foreach unit,$2,$(call _file_exists, $(dir $(abspath $(lastword $(MAKEFILE_LIST))))/$2))
+$(foreach unit,$3,$(call _file_exists, $(dir $(abspath $(lastword $(MAKEFILE_LIST))))/$3))
 
 # register module target
 #  1: module name
@@ -695,7 +695,30 @@ define module_rule
 	$(foreach module,$(__modules), $(call _info_module,$(module));)
 endef
 
+# print module versions
+define print_module_versions
+	$(foreach module,$(__modules), $(call _print_module_version,$(module)))
+endef
+
 modules: ; $(module_rule)
+
+# print current module versions
+module_versions:
+	@$(print_module_versions)
+
+# saves current module versions to a file in the configuration directory
+freeze_module_versions:
+	@echo "====================================================================================="
+	@$(MAKE) module_versions -s > $(_cd)/.versions
+	@echo "module versions saved to $(_cd).versions" 
+	@echo "output paths will freeze module versions to the versions specified in this file"
+	@echo "====================================================================================="
+
+# compare current versions with configuration version
+diff_versions:
+	@$(MAKE) module_versions __load_version_file=F -s > /tmp/.new_versions
+	diff -y --suppress-common-lines $(_cd)/.versions /tmp/.new_versions || :
+
 # not much here for now
 help:
 	$(header_rule)
