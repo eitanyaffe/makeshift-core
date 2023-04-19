@@ -28,11 +28,18 @@ source(paste(mk.dir, "/ptree.r", sep=""))
 params = paste(params, collapse=" ")
 s = strsplit(params, '=', perl=T)[[1]]
 s = sapply(strsplit(s, '\\s+', perl=T), function(x) x[x != ""])
-s[[length(s)]] = c(s[[length(s)]], -1)
-if (length(s[[1]]) != 1)
-  stop(sprintf("first parameter (%s) must be followed by a = mark\n", s[[1]][1]))
-keys = sapply(s[1:length(s)-1], function(x) x[length(x)])
-values = sapply(s[2:length(s)], function(x) x[-length(x)])
+
+if (length(s) > 2) {
+    s[[length(s)]] = c(s[[length(s)]], -1)
+    if (length(s[[1]]) != 1)
+        stop(sprintf("first parameter (%s) must be followed by a = mark\n", s[[1]][1]))
+    keys = sapply(s[1:length(s)-1], function(x) x[length(x)])
+    values = sapply(s[2:length(s)], function(x) x[-length(x)])
+} else {
+    keys = s[[1]]
+    values = s[2]
+}
+
 param.list = list()
 for (i in seq_along(keys)) {
   key = keys[i]

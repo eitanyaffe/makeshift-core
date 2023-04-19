@@ -674,10 +674,11 @@ reval=$(shell $(MAKE) --no-print-directory print2 v=$1 $2 $(PAR_MAKEOVERRIDES))
 reval2=$(shell $(MAKE) --no-print-directory print2 v=$1 $2)
 
 # variable helper functions
-print: ; @echo v=$($(v))
-p: ; @echo v=$($(v))
+print: ; @echo $($(v))
+p: ; @echo $($(v))
 print2: ; @echo $($(v))
 ls: ; ls -lart $($(v))
+wc: ; wc $($(v))
 head: ;	head $($(v))
 tail: ;	tail $($(v))
 cat: ;	cat $($(v))

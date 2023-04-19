@@ -6,18 +6,21 @@ combo.matrix.plot.params=function(create.pdf=T,
                                   field.x="xid", field.y="yid",
                                   title.x="X", title.y="Y",
                                   field.matrix="value",
+                                  label.matrix="value",
                                   color.f.mm=NULL,
                                   plot.legend=T,
                                   cell.size=0.3, panel.gap=0.08, margin.gap=0.5,
-                                  cex.text=1, add.text=F)
+                                  srt.text=0, cex.text=1, add.text=F, disable.text=F)
 {
     list(create.pdf=create.pdf,
          field.x=field.x, field.y=field.y,
          title.x=title.x, title.y=title.y,
          field.matrix=field.matrix,
+         label.matrix=label.matrix,
          color.f.mm=color.f.mm,
          plot.legend=plot.legend,
-         cex.text=cex.text, add.text=add.text,
+         srt.text=srt.text, cex.text=cex.text,
+         add.text=add.text, disable.text=disable.text,
          cell.size=cell.size, panel.gap=panel.gap, margin.gap=margin.gap)
 }
 
@@ -62,7 +65,7 @@ make.panel=function(df, fields, colors, round.d=1, add.text=F,
 {
     if (any(!is.element(fields, names(df))))
         stop(sprintf("missing some fields: %s", paste(fields, collapse=",")))
-    values = df[,fields]
+    values = unlist(df[,fields])
     N = length(colors)
     
     if (!all(is.numeric(values)))
@@ -176,10 +179,10 @@ combo.matrix.plot=function(df.x=NULL, df.y=NULL, df.mm=NULL,
 
         rect(xleft=df.mm$ii.x-1, xright=df.mm$ii.x, ybottom=df.mm$ii.y-1, ytop=df.mm$ii.y,
              col=df.mm$col, border=NA)
-        if (pp$add.text || panel$add.text) {
+        if ((pp$add.text || panel$add.text) && !pp$disable.text) {
             text(x=df.mm$ii.x-0.5, y=df.mm$ii.y-0.5,
-                 labels=round(df.mm[,pp$field.matrix], panel$round.d),
-                 cex=pp$cex.text)
+                 labels=round(df.mm[,pp$label.matrix], panel$round.d),
+                 cex=pp$cex.text, srt=pp$srt.text)
         }
         box()
     }
@@ -220,12 +223,12 @@ combo.matrix.plot=function(df.x=NULL, df.y=NULL, df.mm=NULL,
                 labels = if(panel$type == "smooth") round(df[,field], panel$round.d) else df[,field]
                 if (is.x) {
                     rect(xleft=df$ii-1, xright=df$ii, ybottom=j-1, ytop=j, col=cols, border=NA)
-                    if (pp$add.text || panel$add.text)
-                        text(x=df$ii-0.5, y=j-0.5, labels=labels, cex=pp$cex.text)
+                    if ((pp$add.text || panel$add.text) && !pp$disable.text)
+                        text(x=df$ii-0.5, y=j-0.5, labels=labels, cex=pp$cex.text, srt=pp$srt.text)
                 } else {
                     rect(xleft=j-1, xright=j, ybottom=df$ii-1, ytop=df$ii, col=cols, border=NA)
-                    if (pp$add.text || panel$add.text)
-                        text(x=j-0.5, y=df$ii-0.5, labels=labels, cex=pp$cex.text)
+                    if ((pp$add.text || panel$add.text) && !pp$disable.text)
+                        text(x=j-0.5, y=df$ii-0.5, labels=labels, cex=pp$cex.text, srt=pp$srt.text)
                 }
             }
             if (i == 1) {
