@@ -510,6 +510,11 @@ _module_local=$(call __module,md/$1/$1_int.mk)
 # 1: module name
 _module_root=$(call __module,$(MAKESHIFT_ROOT)/modules/$1/$(notdir $1)_int.mk)
 
+# add module under MAKESHIFT_ROOT
+# 1: module name
+# 2: suffix
+_module_root_suffix=$(call __module,$(MAKESHIFT_ROOT)/modules/$1/$(notdir $1)_int_$2.mk)
+
 # mark active module
 _active_module=$(call __active_module,$1)
 
@@ -682,6 +687,16 @@ wc: ; wc $($(v))
 head: ;	head $($(v))
 tail: ;	tail $($(v))
 cat: ;	cat $($(v))
+
+
+# run target rule in loop 
+# T: target rule
+# NAME: name of variable to iterate through
+# VALS: values of variable to iterate through
+# Example:
+# %> make loop T=p_export VALS="cap1 cap2 cap3" NAME=ASSEMBLY_ID
+loop:
+	$(foreach X,$(VALS),make $T $(NAME)=$X &&) true
 
 # print work plan
 plan:

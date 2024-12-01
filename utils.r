@@ -117,7 +117,6 @@ make.image.colors=function(colors, breaks, ncols=256) {
     list(col=rcolors, breaks=rbreaks)
 }
 
-
 # for example vals.to.cols(1:10, c(1, 3, 10), ncols=10) returns:
 # [1] 1  6 11 12 14 15 16 17 19 20
 vals.to.cols=function(vals, breaks, ncols=256)
