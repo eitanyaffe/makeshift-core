@@ -685,6 +685,7 @@ print2: ; @echo $($(v))
 ls: ; ls -lart $($(v))
 wc: ; wc $($(v))
 head: ;	head $($(v))
+hh: ; @echo "makeshift variable: $(v)"; echo "example of resolved filename: $($(v))"; echo "head of file:"; head -n 5 $($(v))
 tail: ;	tail $($(v))
 cat: ;	cat $($(v))
 
