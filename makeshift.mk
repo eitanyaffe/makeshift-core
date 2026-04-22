@@ -677,6 +677,8 @@ _sub_variables=$(foreach x,$1,$(call _sub_variable,$x,$(addsuffix $2,$x),$3,$4))
 # example: $(call reval,SOME_DATASET_DIR,DATASET=$(DATASET1))
 reval=$(shell $(MAKE) --no-print-directory print2 v=$1 $2 $(PAR_MAKEOVERRIDES))
 reval2=$(shell $(MAKE) --no-print-directory print2 v=$1 $2)
+# like reval but safe under make -n (strips MAKEFLAGS to prevent dry-run propagation)
+reval3=$(shell env -u MAKEFLAGS $(MAKE) --no-print-directory print2 v=$1 $2 $(PAR_MAKEOVERRIDES))
 
 # variable helper functions
 print: ; @echo $($(v))
@@ -706,6 +708,26 @@ plan:
 # clean plan, from scratch 
 splan:
 	@$(MAKE) $t -n PAR_TYPE=local | grep START
+
+# NOTE: nextflow integration is experimental. the code below is kept for
+# now but the whole approach may be refactored.
+# validate: compare makeshift dry-run commands against a nextflow stub run.
+# MS runs once for real; NF stub run is fast (echo + touch only, no compute).
+# usage: make validate t=<ms-target> nf_pipeline=<pipeline> nf_config=<config>
+# example: make validate t=p_malign nf_pipeline=pipelines/p_test/main.nf nf_config=conf/test.config
+NF_ROOT?=/nf
+NF_VALIDATE_DIR?=/tmp/nf_validate
+nf_pipeline?=
+nf_config?=
+validate:
+	mkdir -p $(NF_VALIDATE_DIR)
+	$(MAKE) $t -n PAR_TYPE=local > $(NF_VALIDATE_DIR)/ms_plan.txt
+	cd $(NF_ROOT) && python3 scripts/nf_dry.py $(nf_pipeline) $(nf_config) \
+		--out $(NF_VALIDATE_DIR)/nf_log.txt
+	python3 $(MROOT)/nf_validate.py \
+		--ms $(NF_VALIDATE_DIR)/ms_plan.txt \
+		--nf $(NF_VALIDATE_DIR)/nf_log.txt \
+		--out $(NF_VALIDATE_DIR)/report.txt
 
 # print all modules
 define module_rule
