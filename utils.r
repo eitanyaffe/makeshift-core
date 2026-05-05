@@ -10,9 +10,25 @@ exec=function(command, verbose=T, ignore.error=F)
     rc
 }
 
-send.email=function(sendgrid.key, from.email, to.email, subject, message, attachments=NULL)
+# read key from file: checks code-bucket path and /keys/ (container mount), returns "" if not found
+read.sendgrid.key=function() {
+    candidates = c(
+        file.path(Sys.getenv("MAKESHIFT_ROOT"), "keys", "sendgrid.key"),
+        "/keys/sendgrid.key"
+    )
+    for (f in candidates) {
+        if (nchar(f) > 1 && file.exists(f))
+            return(trimws(readLines(f, warn=FALSE)[1]))
+    }
+    ""
+}
+
+send.email=function(from.email, to.email, subject, message, attachments=NULL)
 {
     if (from.email == "none" || to.email == "none")
+        return (NULL)
+    sendgrid.key = read.sendgrid.key()
+    if (sendgrid.key == "" || sendgrid.key == "NONE")
         return (NULL)
     script = paste0(Sys.getenv("MAKESHIFT_ROOT"), "/makeshift-core/send_email.py")
     command = sprintf("python3 %s -k %s -f %s -t %s -s '%s' -m '%s'", script, sendgrid.key, from.email, to.email, subject, message)
@@ -317,7 +333,71 @@ fig.dir=function(dir, verbose=T)
     }
 }
 
-fig.start=function(ofn, type="png", fdir=NA, verbose=T, width=400, height=400, ...)
+# private state shared between fig.start and fig.end
+.fig.state = new.env(parent=emptyenv())
+
+# resolve the qr.mode param to a logical: TRUE = stamp, FALSE = skip.
+# "auto" defers to MAKESHIFT_USE_QRCODE; "on"/"off" ignore the env.
+# env is expected to be "on" or "off"; anything else (including unset/empty) means skip.
+.fig.resolve.qr.mode = function(qr.mode)
+{
+    if (is.logical(qr.mode)) return(isTRUE(qr.mode))
+    m = tolower(as.character(qr.mode))
+    if (m == "on")  return(TRUE)
+    if (m == "off") return(FALSE)
+    if (m != "auto") return(FALSE)
+    env = tolower(Sys.getenv("MAKESHIFT_USE_QRCODE", unset=""))
+    env == "on"
+}
+
+# resolve the qr.size param to a numeric fraction of device width (e.g. 0.03 = 3%).
+# "auto" defers to MAKESHIFT_QRCODE_SIZE; numeric is taken as-is.
+# fallback when env is missing/unparseable is 0.03.
+.fig.resolve.qr.size = function(qr.size)
+{
+    if (is.numeric(qr.size)) return(qr.size)
+    s = tolower(as.character(qr.size))
+    if (s != "auto") {
+        v = suppressWarnings(as.numeric(s))
+        if (!is.na(v)) return(v)
+    }
+    v = suppressWarnings(as.numeric(Sys.getenv("MAKESHIFT_QRCODE_SIZE", unset="")))
+    if (is.na(v)) 0.03 else v
+}
+
+# draw a vector QR of "src: <abspath>" in the bottom-left corner of the active device.
+# side.frac is the QR side length as a fraction of device width (square in inches).
+# pad.frac is the corner inset, also as a fraction of device width.
+# vector rects (not rasterGrob) keep edges crisp in PDFs.
+.fig.draw.qr.stamp = function(ofn, side.frac, pad.frac=0.005)
+{
+    payload = paste0("src: ", normalizePath(ofn, mustWork=FALSE))
+    m = qrcode::qr_code(payload, ecl="L")
+    n = nrow(m)
+    din = graphics::par("din")
+    side.inch = din[1] * side.frac
+    pad.inch  = din[1] * pad.frac
+    vp = grid::viewport(x = grid::unit(pad.inch, "inches"),
+                        y = grid::unit(pad.inch, "inches"),
+                        width  = grid::unit(side.inch, "inches"),
+                        height = grid::unit(side.inch, "inches"),
+                        just = c("left", "bottom"))
+    grid::pushViewport(vp)
+    grid::grid.rect(gp = grid::gpar(fill="white", col=NA))
+    idx = which(m, arr.ind=TRUE)
+    if (length(idx) > 0) {
+        xs = (idx[, "col"] - 1) / n
+        ys = (n - idx[, "row"]) / n
+        grid::grid.rect(x = xs, y = ys,
+                        width = 1/n, height = 1/n,
+                        just = c("left", "bottom"),
+                        gp = grid::gpar(fill="black", col=NA))
+    }
+    grid::popViewport()
+}
+
+fig.start=function(ofn, type="png", fdir=NA, verbose=T, width=400, height=400,
+                   qr.mode="auto", qr.size="auto", ...)
 {
     if (!is.na(fdir))
         fig.dir(fdir, verbose=verbose)
@@ -327,10 +407,20 @@ fig.start=function(ofn, type="png", fdir=NA, verbose=T, width=400, height=400, .
            png = png(ofn, width=width, height=height, ...),
            pdf = pdf(ofn, width=width, height=height, ...)
            )
+
+    .fig.state$ofn = ofn
+    .fig.state$qr.do = .fig.resolve.qr.mode(qr.mode)
+    .fig.state$qr.side.frac = .fig.resolve.qr.size(qr.size)
 }
 
 fig.end=function()
 {
+    if (isTRUE(.fig.state$qr.do) && requireNamespace("qrcode", quietly=TRUE)) {
+        .fig.draw.qr.stamp(.fig.state$ofn, .fig.state$qr.side.frac)
+    }
+    .fig.state$ofn = NULL
+    .fig.state$qr.do = NULL
+    .fig.state$qr.side.frac = NULL
     dev.off()
 }
 

@@ -62,6 +62,13 @@ _module_version=$($(_$(mname)_version))
 # units
 _units=$(_$(mname)_units)
 
+# bottom-left QR stamp in R plots (see fig.start/fig.end in makeshift-core/utils.r)
+# MAKESHIFT_USE_QRCODE: on|off; MAKESHIFT_QRCODE_SIZE: side length as a fraction of device width (e.g. 0.03 = 3%)
+MAKESHIFT_USE_QRCODE?=on
+MAKESHIFT_QRCODE_SIZE?=0.07
+export MAKESHIFT_USE_QRCODE
+export MAKESHIFT_QRCODE_SIZE
+
 #####################################################################################################
 # utility internal functions
 #####################################################################################################

@@ -26,7 +26,7 @@ for o,a in opts:
         usage()
         sys.exit()
     elif o in ("-k", "--key"):
-        efrom = a
+        key = a
     elif o in ("-f", "--from"):
         efrom = a
     elif o in ("-t", "--to"):
@@ -53,6 +53,9 @@ file_types = {
 }
 if (len(attach_files) > 0):
     for fn in attach_files:
+        if not os.path.exists(fn):
+            print(f"warning: attachment not found, skipping: {fn}")
+            continue
         with open(fn, 'rb') as f:
             data = f.read()
             f.close()
