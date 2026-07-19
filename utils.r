@@ -522,4 +522,83 @@ load.table=function(ifn, assert.exists=T, verbose=T, ...)
     read.delim(ifn, ...)
 }
 
+################################################################################################
+# ms figure captions
+################################################################################################
+
+# render a caption template with {{key}} placeholders, next to a pdf output.
+#
+# gated by MAKESHIFT_CREATE_CAPTIONS env var: if unset or not "T", this
+# function is a no-op (no file written, no checks). that way ad-hoc plot
+# runs never accidentally produce captions that then get shipped without
+# vetting. captions are written only when the caller explicitly opts in
+# (typically the pipeline's p_figs / p_ms recipes).
+#
+# when the flag is set, this function fails loud on:
+#   - missing binding: {{key}} in template with no entry in subs
+#   - drift:          entry in subs whose key is not in the template
+#   - drift:          entry in asserts whose key is not referenced anywhere
+#                     (asserts is name-checked purely for our own bookkeeping;
+#                      names never appear in the template)
+#   - broken claim:   any entry in asserts whose value is not identically TRUE
+#
+# see the ms-manuscript skill for the discipline around what to assert.
+render.caption=function(template.path, pdf.ofn, subs=list(), asserts=list(), verbose=T)
+{
+    if (Sys.getenv("MAKESHIFT_CREATE_CAPTIONS", "F") != "T")
+        return(invisible(NULL))
+
+    if (!file.exists(template.path))
+        stop(sprintf("render.caption: template not found: %s", template.path))
+
+    # strip leading '# ...' metadata lines (e.g. '# user-edited: 2026-07-13')
+    # and any blank lines immediately following them. these are template
+    # bookkeeping and must not appear in the rendered caption.
+    lines = readLines(template.path, warn=F)
+    while (length(lines) > 0 && grepl("^\\s*(#|$)", lines[1]))
+        lines = lines[-1]
+    txt = paste(lines, collapse="\n")
+
+    m = regmatches(txt, gregexpr("\\{\\{[A-Za-z_][A-Za-z0-9_]*\\}\\}", txt))[[1]]
+    template.keys = unique(sub("^\\{\\{", "", sub("\\}\\}$", "", m)))
+
+    subs.keys = if (is.null(names(subs))) character(0) else names(subs)
+
+    missing = setdiff(template.keys, subs.keys)
+    if (length(missing) > 0)
+        stop(sprintf("render.caption: template has placeholders with no binding: %s\n  template: %s",
+                     paste(missing, collapse=", "), template.path))
+
+    extra = setdiff(subs.keys, template.keys)
+    if (length(extra) > 0)
+        stop(sprintf("render.caption: subs contain unused keys (drift): %s\n  template: %s",
+                     paste(extra, collapse=", "), template.path))
+
+    # asserts: every entry must be a length-1 logical, and TRUE. failure
+    # here is the hard-fail path this whole mechanism exists for.
+    asserts.keys = if (is.null(names(asserts))) character(0) else names(asserts)
+    if (length(asserts) > 0 && (length(asserts.keys) != length(asserts) || any(asserts.keys == "")))
+        stop(sprintf("render.caption: asserts must be a fully-named list\n  template: %s",
+                     template.path))
+
+    for (k in asserts.keys) {
+        v = asserts[[k]]
+        if (!is.logical(v) || length(v) != 1L || is.na(v))
+            stop(sprintf("render.caption: assert '%s' must be a single TRUE/FALSE (got: %s)\n  template: %s",
+                         k, paste(deparse(v), collapse=" "), template.path))
+        if (!isTRUE(v))
+            stop(sprintf("render.caption: assert '%s' failed — caption claims something the plot did not do.\n  template: %s\n  pdf:      %s",
+                         k, template.path, pdf.ofn))
+    }
+
+    out = txt
+    for (k in template.keys)
+        out = gsub(paste0("{{", k, "}}"), as.character(subs[[k]]), out, fixed=T)
+
+    ofn = file.path(dirname(pdf.ofn),
+                    paste0("caption_", sub("\\.pdf$", ".txt", basename(pdf.ofn))))
+    if (verbose) cat(sprintf("writing caption: %s\n", ofn))
+    writeLines(out, ofn)
+}
+
 source(paste0(Sys.getenv("MAKESHIFT_ROOT"), "/makeshift-core/combo_matrix.r"))

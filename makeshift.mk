@@ -275,6 +275,23 @@ define _get_params
 `perl $(_dir)/table2params.pl $1 $2`
 endef
 
+# batched variant of _get_params for local execution over large tables.
+# returns number of batches given a table and batch size.
+# 1: table name
+# 2: batch size
+define _get_params_count
+`perl $(_dir)/table_batch.pl count $1 $2`
+endef
+
+# returns params for one batch (1-indexed) in the same format as _get_params.
+# 1: table name
+# 2: field
+# 3: batch size
+# 4: batch index (1..N)
+define _get_params_batch
+`perl $(_dir)/table_batch.pl batch $1 $2 $3 $4`
+endef
+
 #####################################################################################################
 # config functions
 #####################################################################################################
@@ -682,10 +699,10 @@ _sub_variables=$(foreach x,$1,$(call _sub_variable,$x,$(addsuffix $2,$x),$3,$4))
 
 # re-evaluate variable $1 given other variables defined in $2
 # example: $(call reval,SOME_DATASET_DIR,DATASET=$(DATASET1))
-reval=$(shell $(MAKE) --no-print-directory print2 v=$1 $2 $(PAR_MAKEOVERRIDES))
-reval2=$(shell $(MAKE) --no-print-directory print2 v=$1 $2)
-# like reval but safe under make -n (strips MAKEFLAGS to prevent dry-run propagation)
-reval3=$(shell env -u MAKEFLAGS $(MAKE) --no-print-directory print2 v=$1 $2 $(PAR_MAKEOVERRIDES))
+# strips v= from forwarded overrides (avoids recursion on make hh v=...)
+# strips MAKEFLAGS (safe under make -n / make plan)
+# caller $2 wins over outer command-line overrides
+reval=$(shell env -u MAKEFLAGS $(MAKE) --no-print-directory print2 v=$1 $(filter-out v=%,$(PAR_MAKEOVERRIDES)) $2)
 
 # variable helper functions
 print: ; @echo $($(v))
