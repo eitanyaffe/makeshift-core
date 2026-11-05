@@ -308,6 +308,31 @@ plot.empty=function(title, cex=1)
     text(0.5, 0.5, title, cex=cex)
 }
 
+# manuscript axis bands. ticks are a quarter line and point at the labels.
+# the tick label starts 0.04 in past the tip. the axis title is the next
+# band out, so a crop can take the title, the tick labels, or both.
+ms.axis.tcl <- -0.25
+
+# one axis font for every manuscript figure. 7 pt. not scaled with the page.
+ms.axis.cex <- 7/12
+
+# one scale so a static page keeps its aspect and fits the slide box.
+# orig and box are the page width and height in inches.
+ms.fit.scale <- function(orig.w, orig.h, box.w, box.h) {
+    min(box.w / orig.w, box.h / orig.h)
+}
+
+# nearest quarter inch. a quarter is a whole number of points, so the pdf keeps it.
+# 2.76 becomes 2.75. a twentieth of an inch is not, and the device rounds it away.
+ms.nice.in <- function(x) round(x * 4) / 4
+
+ms.axis.lab.line <- function() {
+    csi <- tryCatch(par("csi"), error = function(e) 0.2)
+    if (!is.finite(csi) || csi <= 0)
+        csi <- 0.2
+    0.25 + 0.04 / csi
+}
+
 plot.init=function(xlim, ylim, log="",
     main="", xlab="", ylab="",
     add.box=T, x.axis=T, y.axis=T, axis.las=0,
