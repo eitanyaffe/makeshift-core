@@ -326,11 +326,78 @@ ms.fit.scale <- function(orig.w, orig.h, box.w, box.h) {
 # 2.76 becomes 2.75. a twentieth of an inch is not, and the device rounds it away.
 ms.nice.in <- function(x) round(x * 4) / 4
 
+# one page and one plot-area size (inches) for single ggplot panels that sit side
+# by side, so their boxes line up whatever the width of their axis text
+ms.panel.page <- 2.25
+ms.panel.box <- 1.4
+
+# the ggplot theme of those panels: 7 pt text, short ticks, labels just past the tips,
+# the axis title in the next band out
+ms.panel.theme <- function(title.size=7, axis.title.size=7, axis.text.size=7) {
+    in.margin <- function(...) ggplot2::margin(..., unit="in")
+    black.text <- function(size, ...) ggplot2::element_text(size=size, color="black", ...)
+    ggplot2::theme_bw(base_size=axis.title.size) +
+        ggplot2::theme(
+            aspect.ratio=1, legend.position="none",
+            plot.title=ggplot2::element_text(size=title.size, hjust=0.5),
+            axis.title=black.text(axis.title.size),
+            axis.text=black.text(axis.text.size),
+            axis.ticks=ggplot2::element_line(color="black"),
+            axis.ticks.length=grid::unit(0.05, "in"),
+            axis.text.x=black.text(axis.text.size, margin=in.margin(t=0.04)),
+            axis.text.y=black.text(axis.text.size, margin=in.margin(r=0.04)),
+            panel.border=ggplot2::element_rect(color="black", fill=NA, linewidth=0.4),
+            axis.title.x=black.text(axis.title.size, margin=in.margin(t=0.10)),
+            axis.title.y=black.text(axis.title.size, margin=in.margin(r=0.10)),
+            plot.margin=ggplot2::margin(8, 8, 6, 4, "pt"))
+}
+
+# a ggplot as a gtable whose plot area is exactly box.w x box.h inches
+ms.fixed.panel <- function(p, box.w=ms.panel.box, box.h=box.w) {
+    # building the gtable needs a device; a null one keeps it from writing Rplots.pdf
+    prev <- grDevices::dev.cur()
+    grDevices::pdf(NULL)
+    g <- ggplot2::ggplotGrob(p)
+    grDevices::dev.off()
+    if (prev > 1)
+        grDevices::dev.set(prev)
+    panel <- g$layout[g$layout$name == "panel", ]
+    if (nrow(panel) != 1)
+        stop("ms.fixed.panel expects a plot with one panel")
+    g$widths[panel$l] <- grid::unit(box.w, "in")
+    g$heights[panel$t] <- grid::unit(box.h, "in")
+    g$respect <- FALSE
+    g
+}
+
 ms.axis.lab.line <- function() {
     csi <- tryCatch(par("csi"), error = function(e) 0.2)
     if (!is.finite(csi) || csi <= 0)
         csi <- 0.2
     0.25 + 0.04 / csi
+}
+
+# line for horizontal tick labels on side 1 whose cap tops sit 0.04 in past the tick
+# tips. R puts a side-1 baseline at line + 1 - ylbias, whatever the cex.
+ms.axis.xlab.line <- function(cex) {
+    csi <- par("csi")
+    cap <- 0.72 * cex * par("ps") / 72
+    (-ms.axis.tcl * csi + 0.04 + cap) / csi - (1 - par("ylbias"))
+}
+
+# mtext line for an axis title 0.10 in past its tick labels. side 2 titles are
+# rotated, with the baseline at line + ylbias; side 1 tick labels use ms.axis.xlab.line.
+ms.axis.title.line <- function(side, labels, cex, title.cex=ms.axis.cex, title="") {
+    csi <- par("csi")
+    if (side %in% c(2, 4)) {
+        w <- max(strwidth(as.character(labels), cex=cex, units="inches"))
+        # descenders of a rotated title reach toward the tick labels
+        desc <- if (grepl("[gjpqy,;()]", title)) 0.21 * title.cex * par("ps") / 72 else 0
+        return(ms.axis.lab.line() + (w + 0.10 + desc) / csi - par("ylbias"))
+    }
+    base.in <- (ms.axis.xlab.line(cex) + 1 - par("ylbias")) * csi
+    cap <- 0.72 * title.cex * par("ps") / 72
+    (base.in + 0.10 + cap) / csi - (1 - par("ylbias"))
 }
 
 plot.init=function(xlim, ylim, log="",
